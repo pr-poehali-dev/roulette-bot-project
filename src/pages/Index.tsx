@@ -25,12 +25,12 @@ const Index = () => {
       return { result: 'red', number: 1 };
     }
 
-    const hexToNumber = (hex: string): number => {
-      return parseInt(hex.slice(0, 8), 16);
-    };
-
-    const hashNumber = hexToNumber(hashValue);
-    const rouletteNumber = hashNumber % 37;
+    let sum = 0;
+    for (let i = 0; i < hashValue.length; i++) {
+      sum += hashValue.charCodeAt(i);
+    }
+    
+    const rouletteNumber = sum % 37;
 
     let result: 'red' | 'black' | 'green';
     if (rouletteNumber === 0) {
