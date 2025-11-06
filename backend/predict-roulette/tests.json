@@ -1,0 +1,39 @@
+{
+  "tests": [
+    {
+      "name": "Valid SHA-1 hash prediction",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "sha1_hash": "0710f5c3e71e641cf28bd68347feff27d558ac2f"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "number": "number",
+        "color": "string",
+        "hash": "string",
+        "algorithm": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Invalid hash length",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "sha1_hash": "short"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "OPTIONS CORS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}
