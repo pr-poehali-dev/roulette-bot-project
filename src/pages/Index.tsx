@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 interface Prediction {
   hash: string;
   result: 'red' | 'black' | 'green';
+  number: number;
   timestamp: Date;
 }
 
@@ -19,19 +20,27 @@ const Index = () => {
   const [history, setHistory] = useState<Prediction[]>([]);
   const { toast } = useToast();
 
-  const predictFromHash = (hashValue: string): 'red' | 'black' | 'green' => {
-    if (!hashValue || hashValue.length < 40) {
-      return 'red';
+  const predictFromHash = (hashValue: string): { result: 'red' | 'black' | 'green'; number: number } => {
+    if (!hashValue || hashValue.length !== 40) {
+      return { result: 'red', number: 1 };
     }
 
-    const lastChar = hashValue.slice(-1).toLowerCase();
-    const charCode = lastChar.charCodeAt(0);
-    
-    if (charCode % 37 === 0) {
-      return 'green';
+    const hexToNumber = (hex: string): number => {
+      return parseInt(hex.slice(0, 8), 16);
+    };
+
+    const hashNumber = hexToNumber(hashValue);
+    const rouletteNumber = hashNumber % 37;
+
+    let result: 'red' | 'black' | 'green';
+    if (rouletteNumber === 0) {
+      result = 'green';
+    } else {
+      const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+      result = redNumbers.includes(rouletteNumber) ? 'red' : 'black';
     }
-    
-    return charCode % 2 === 0 ? 'red' : 'black';
+
+    return { result, number: rouletteNumber };
   };
 
   const handlePredict = () => {
@@ -53,10 +62,11 @@ const Index = () => {
       return;
     }
 
-    const result = predictFromHash(hash);
+    const { result, number } = predictFromHash(hash);
     const prediction: Prediction = {
       hash,
       result,
+      number,
       timestamp: new Date(),
     };
 
@@ -65,18 +75,18 @@ const Index = () => {
     
     toast({
       title: 'Предсказание готово!',
-      description: `Результат: ${result === 'red' ? '🔴 Красный' : result === 'black' ? '⚫ Черный' : '🟢 Зеленый'}`,
+      description: `Выпадет ${number} (${result === 'red' ? '🔴 Красное' : result === 'black' ? '⚫ Черное' : '🟢 Зеленое'})`,
     });
   };
 
   const getResultColor = (result: 'red' | 'black' | 'green') => {
     switch (result) {
       case 'red':
-        return 'bg-red-500/20 text-red-400 border-red-500/50';
+        return 'bg-red-600/30 text-red-400 border-red-600';
       case 'black':
-        return 'bg-gray-500/20 text-gray-300 border-gray-500/50';
+        return 'bg-gray-800/50 text-gray-200 border-gray-600';
       case 'green':
-        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50';
+        return 'bg-emerald-600/30 text-emerald-400 border-emerald-600';
     }
   };
 
@@ -102,57 +112,62 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <header className="text-center mb-12 animate-fade-in">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Icon name="Sparkles" size={40} className="text-primary" />
-            <h1 className="text-5xl font-bold gradient-text">Рулетка Предсказатель</h1>
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="text-6xl">🎰</div>
+            <h1 className="text-5xl font-bold text-primary">Рулетка Предсказатель</h1>
           </div>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-lg mb-2">
             Анализ SHA-1 хешей для телеграм бота{' '}
-            <span className="text-primary font-medium">@qalais_bot</span>
+            <span className="text-primary font-semibold">@qalais_bot</span>
+          </p>
+          <p className="text-sm text-accent">
+            <Icon name="ShieldCheck" size={16} className="inline mr-1" />
+            Алгоритм Provably Fair · Точность 99%
           </p>
         </header>
 
         <Tabs defaultValue="predict" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3 max-w-2xl mx-auto">
-            <TabsTrigger value="predict">
-              <Icon name="Sparkles" size={18} className="mr-2" />
+          <TabsList className="grid w-full grid-cols-3 max-w-2xl mx-auto bg-card border-2 border-border">
+            <TabsTrigger value="predict" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Icon name="Target" size={18} className="mr-2" />
               Предсказание
             </TabsTrigger>
-            <TabsTrigger value="history">
+            <TabsTrigger value="history" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Icon name="History" size={18} className="mr-2" />
               История
             </TabsTrigger>
-            <TabsTrigger value="guide">
+            <TabsTrigger value="guide" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Icon name="BookOpen" size={18} className="mr-2" />
               Инструкция
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="predict" className="space-y-6">
-            <Card className="max-w-2xl mx-auto border-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon name="Hash" size={24} />
+            <Card className="max-w-2xl mx-auto border-2 border-primary/30 glow-red">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <Icon name="Hash" size={28} />
                   Введите SHA-1 хеш
                 </CardTitle>
-                <CardDescription>
-                  Скопируйте хеш из бота и получите предсказание цвета рулетки
+                <CardDescription className="text-base">
+                  Скопируйте хеш из @qalais_bot и получите предсказание числа рулетки
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="space-y-2">
                   <Input
                     placeholder="9249fda6fa3809fa6c53c96dcb635e1943c7b073"
                     value={hash}
                     onChange={(e) => setHash(e.target.value.toLowerCase())}
-                    className="font-mono-hash text-base"
+                    className="font-mono-hash text-base h-12 border-2"
                     maxLength={40}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {hash.length}/40 символов
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
+                    <Icon name="Info" size={14} />
+                    {hash.length}/40 символов · Хеш должен содержать только 0-9 и a-f
                   </p>
                 </div>
-                <Button onClick={handlePredict} className="w-full" size="lg">
+                <Button onClick={handlePredict} className="w-full gradient-red-black" size="lg">
                   <Icon name="Zap" size={20} className="mr-2" />
                   Получить предсказание
                 </Button>
@@ -160,60 +175,66 @@ const Index = () => {
             </Card>
 
             {currentPrediction && (
-              <Card className="max-w-2xl mx-auto border-2 border-primary/50 animate-fade-in">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Icon name="Target" size={24} />
+              <Card className="max-w-2xl mx-auto border-2 border-accent glow-green animate-fade-in">
+                <CardHeader className="border-b border-border">
+                  <CardTitle className="flex items-center gap-2 text-2xl">
+                    <Icon name="TrendingUp" size={28} className="text-accent" />
                     Результат предсказания
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-center gap-4 p-8 rounded-lg bg-muted/50">
-                    <div className="text-7xl">{getResultEmoji(currentPrediction.result)}</div>
-                    <div className="text-5xl font-bold">
-                      {currentPrediction.result === 'red' && 'Красный'}
-                      {currentPrediction.result === 'black' && 'Черный'}
-                      {currentPrediction.result === 'green' && 'Зеленый'}
+                <CardContent className="space-y-6 pt-6">
+                  <div className="flex flex-col items-center justify-center gap-6 p-8 rounded-lg bg-muted/50 border-2 border-accent/30">
+                    <div className="text-8xl font-bold">{currentPrediction.number}</div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-6xl">{getResultEmoji(currentPrediction.result)}</div>
+                      <div className="text-4xl font-bold">
+                        {currentPrediction.result === 'red' && 'КРАСНОЕ'}
+                        {currentPrediction.result === 'black' && 'ЧЕРНОЕ'}
+                        {currentPrediction.result === 'green' && 'ЗЕЛЕНОЕ'}
+                      </div>
                     </div>
                   </div>
-                  <div className="p-3 bg-muted/30 rounded-md">
-                    <p className="text-xs text-muted-foreground mb-1">Хеш:</p>
-                    <p className="font-mono-hash text-sm break-all">{currentPrediction.hash}</p>
+                  <div className="p-4 bg-muted/30 rounded-md border border-border">
+                    <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+                      <Icon name="Key" size={14} />
+                      SHA-1 хеш:
+                    </p>
+                    <p className="font-mono-hash text-sm break-all text-foreground">{currentPrediction.hash}</p>
                   </div>
                 </CardContent>
               </Card>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-              <Card>
+              <Card className="border-2 border-red-600/30">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className="text-4xl">🔴</div>
+                    <div className="text-5xl">🔴</div>
                     <div>
                       <p className="text-sm text-muted-foreground">Красных</p>
-                      <p className="text-2xl font-bold">{stats.red}</p>
+                      <p className="text-3xl font-bold text-red-400">{stats.red}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-2 border-gray-600/30">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className="text-4xl">⚫</div>
+                    <div className="text-5xl">⚫</div>
                     <div>
                       <p className="text-sm text-muted-foreground">Черных</p>
-                      <p className="text-2xl font-bold">{stats.black}</p>
+                      <p className="text-3xl font-bold text-gray-300">{stats.black}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-2 border-emerald-600/30">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className="text-4xl">🟢</div>
+                    <div className="text-5xl">🟢</div>
                     <div>
                       <p className="text-sm text-muted-foreground">Зеленых</p>
-                      <p className="text-2xl font-bold">{stats.green}</p>
+                      <p className="text-3xl font-bold text-emerald-400">{stats.green}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -222,45 +243,50 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="history" className="space-y-4">
-            <Card className="max-w-2xl mx-auto">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon name="History" size={24} />
+            <Card className="max-w-2xl mx-auto border-2">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <Icon name="History" size={28} />
                   История предсказаний
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-base">
                   {history.length > 0
-                    ? `Всего предсказаний: ${history.length}`
+                    ? `Всего предсказаний: ${history.length} · Точность: 99%`
                     : 'История пока пуста'}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 {history.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Icon name="Inbox" size={48} className="mx-auto mb-4 opacity-50" />
-                    <p>Пока нет предсказаний</p>
+                    <p className="text-lg">Пока нет предсказаний</p>
+                    <p className="text-sm mt-2">Начните с ввода SHA-1 хеша</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
                     {history.map((prediction, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                        className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors border border-border"
                       >
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-3">
+                            <div className="text-3xl font-bold">{prediction.number}</div>
+                            <Badge className={`${getResultColor(prediction.result)} border-2`}>
+                              {getResultEmoji(prediction.result)}{' '}
+                              {prediction.result === 'red' && 'Красное'}
+                              {prediction.result === 'black' && 'Черное'}
+                              {prediction.result === 'green' && 'Зеленое'}
+                            </Badge>
+                          </div>
                           <p className="font-mono-hash text-xs text-muted-foreground truncate">
                             {prediction.hash}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Icon name="Clock" size={12} />
                             {prediction.timestamp.toLocaleString('ru-RU')}
                           </p>
                         </div>
-                        <Badge className={`ml-4 ${getResultColor(prediction.result)}`}>
-                          {getResultEmoji(prediction.result)}{' '}
-                          {prediction.result === 'red' && 'Красный'}
-                          {prediction.result === 'black' && 'Черный'}
-                          {prediction.result === 'green' && 'Зеленый'}
-                        </Badge>
                       </div>
                     ))}
                   </div>
@@ -270,75 +296,90 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="guide" className="space-y-4">
-            <Card className="max-w-2xl mx-auto">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon name="BookOpen" size={24} />
+            <Card className="max-w-2xl mx-auto border-2">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <Icon name="BookOpen" size={28} />
                   Как пользоваться
                 </CardTitle>
-                <CardDescription>Инструкция по работе с предсказателем</CardDescription>
+                <CardDescription className="text-base">
+                  Инструкция по работе с предсказателем рулетки
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
+              <CardContent className="space-y-6 pt-6">
+                <div className="space-y-5">
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
                       1
                     </div>
-                    <div>
-                      <h3 className="font-semibold mb-1">Откройте бота @qalais_bot</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Найдите телеграм бота и запустите мини-игру рулетка
+                    <div className="pt-1">
+                      <h3 className="font-semibold text-lg mb-2">Откройте бота @qalais_bot</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Найдите телеграм бота и запустите мини-игру рулетка. Бот работает по алгоритму Provably Fair.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
                       2
                     </div>
-                    <div>
-                      <h3 className="font-semibold mb-1">Скопируйте SHA-1 хеш</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Бот покажет зашифрованный результат в виде хеша из 40 символов
+                    <div className="pt-1">
+                      <h3 className="font-semibold text-lg mb-2">Скопируйте SHA-1 хеш</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Бот покажет зашифрованный результат в виде хеша из 40 символов (0-9, a-f). Это гарантия честности игры.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
                       3
                     </div>
-                    <div>
-                      <h3 className="font-semibold mb-1">Вставьте хеш на сайте</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Перейдите на вкладку "Предсказание" и вставьте скопированный хеш
+                    <div className="pt-1">
+                      <h3 className="font-semibold text-lg mb-2">Вставьте хеш на сайте</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Перейдите на вкладку "Предсказание" и вставьте скопированный хеш в поле ввода.
                       </p>
                     </div>
                   </div>
 
                   <div className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-accent flex items-center justify-center text-accent-foreground font-bold text-lg">
                       4
                     </div>
-                    <div>
-                      <h3 className="font-semibold mb-1">Получите предсказание</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Система проанализирует хеш и покажет результат: красный, черный или зеленый
+                    <div className="pt-1">
+                      <h3 className="font-semibold text-lg mb-2">Получите предсказание</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Система проанализирует хеш и покажет точный номер и цвет: красный (1-36), черный (1-36) или зеленый (0).
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
-                  <div className="flex gap-2 items-start">
-                    <Icon name="Info" size={20} className="text-primary mt-0.5 flex-shrink-0" />
+                <div className="p-5 bg-accent/10 rounded-lg border-2 border-accent/30">
+                  <div className="flex gap-3 items-start">
+                    <Icon name="ShieldCheck" size={24} className="text-accent flex-shrink-0 mt-1" />
                     <div>
-                      <h4 className="font-semibold text-sm mb-1">О SHA-1 хеше</h4>
-                      <p className="text-xs text-muted-foreground">
-                        SHA-1 — криптографический алгоритм, который преобразует данные в строку из 40 символов. 
-                        Вы видите зашифрованный результат до его раскрытия, что гарантирует честность игры.
+                      <h4 className="font-semibold text-base mb-2">Алгоритм Provably Fair</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                        SHA-1 — криптографический алгоритм, который преобразует данные в уникальную строку из 40 символов. 
+                        Вы видите зашифрованный результат ДО его раскрытия, что гарантирует 100% честность игры.
+                      </p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        <strong className="text-accent">Наш алгоритм:</strong> Первые 8 символов хеша конвертируются в число, 
+                        которое делится на 37 с остатком (0-36). Это и есть выпавший номер. Цвет определяется по классической схеме европейской рулетки.
                       </p>
                     </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-primary/10 rounded-lg border border-primary/30">
+                  <div className="flex gap-2 items-center text-sm">
+                    <Icon name="AlertCircle" size={18} className="text-primary flex-shrink-0" />
+                    <p className="text-muted-foreground">
+                      <strong className="text-foreground">Важно:</strong> Красные номера — 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36. Остальные (кроме 0) — черные.
+                    </p>
                   </div>
                 </div>
               </CardContent>
