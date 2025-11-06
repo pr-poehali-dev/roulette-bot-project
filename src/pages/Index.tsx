@@ -25,12 +25,11 @@ const Index = () => {
       return { result: 'red', number: 1 };
     }
 
-    let sum = 0;
-    for (let i = 0; i < hashValue.length; i++) {
-      sum += hashValue.charCodeAt(i);
-    }
-    
-    const rouletteNumber = sum % 37;
+    // Алгоритм обратной разработки на основе реальных примеров
+    // Берём первые 8 символов хеша как hex число и делим на 37
+    const hexPart = hashValue.substring(0, 8);
+    const decimalValue = parseInt(hexPart, 16);
+    const rouletteNumber = decimalValue % 37;
 
     let result: 'red' | 'black' | 'green';
     if (rouletteNumber === 0) {
